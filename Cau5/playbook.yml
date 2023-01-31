@@ -1,0 +1,58 @@
+---
+- name: Configure Router1
+  hosts: R1
+  gather_facts: False
+
+  tasks:
+    - name: Set ip
+      ios_config:
+        lines:
+          - no shutdown
+          - ip address 192.168.{{ item.ip }} 255.255.255.0
+        parents: "{{ item.int}}"
+        diff_against: startup
+
+      loop:
+	      - { ip: 1.1, int: interface Ethernet0/1}
+        - { ip: 12.1, int: interface Ethernet0/2}
+
+    - name: configure static route
+      ios_static_route:
+        prefix: 192.168.2.0
+        mask: 255.255.255.0
+        next_hop: 192.168.12.2
+    - name: Save Config
+      ios_command:
+        commands: write memory
+
+- name: Configure Router2
+  hosts: R2
+  gather_facts: False
+
+  tasks:
+    - name: Set ip
+      ios_config:
+        lines:
+         - no shutdown
+         - ip address 192.168.{{ item.ip }} 255.255.255.0
+        parents: "{{ item.int }}"
+        diff_against: startup
+
+      loop:
+	      - { ip: 2.1, int: interface Ethernet0/1}
+        - { ip: 12.2, int: interface Ethernet0/2}
+
+    - name: configure static route
+      ios_static_route:
+        prefix: 192.168.1.0
+        mask: 255.255.255.0
+        next_hop: 192.168.12.1
+    - name: Save Config
+      ios_command:
+        commands: write memory
+
+    - name: Test ping E0/1 to R1
+      ios_ping:
+        dest: 192.168.12.1
+        source: Ethernet0/1
+
